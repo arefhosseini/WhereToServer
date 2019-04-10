@@ -233,7 +233,7 @@ class PlaceScore(models.Model):
     ambiance_score = models.IntegerField(default=0)
 
     def __str__(self):
-        return self.user, self.place
+        return "%s %s" % (self.user, self.place)
 
 
 class CoordinatePlace(models.Model):
@@ -242,7 +242,7 @@ class CoordinatePlace(models.Model):
     longitude = models.FloatField(null=False)
 
     def __str__(self):
-        return self.latitude, self.longitude
+        return "%s %s" % (self.latitude, self.longitude)
 
 
 class PhonePlace(models.Model):
@@ -262,7 +262,7 @@ class PlaceImage(models.Model):
     down_vote = models.IntegerField(default=0)
 
     def __str__(self):
-        return self.user, self.place
+        return "%s %s" % (self.user, self.place)
 
 
 class FavoritePlace(models.Model):
@@ -271,7 +271,7 @@ class FavoritePlace(models.Model):
     created_date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return self.user, self.place
+        return "%s %s" % (self.user, self.place)
 
 
 class Menu(models.Model):
@@ -293,12 +293,12 @@ class Food(models.Model):
 
 
 class Friend(models.Model):
-    follower = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
-    following = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
+    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='follower', null=False)
+    following = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following', null=False)
     created_date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return self.follower, self.following
+        return "%s %s" % (self.follower, self.following)
 
 
 class Review(models.Model):
