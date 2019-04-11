@@ -15,7 +15,20 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
 
+from WhereTo import views
 urlpatterns = [
     path('admin/', admin.site.urls),
-]
+    path('user/', views.UserList.as_view()),
+    path('user/<int:phone_number>/', views.UserDetail.as_view()),
+    path('place/<int:pk>/', views.PlaceDetail.as_view()),
+    path('place_menu/<int:pk>/', views.MenuDetail.as_view()),
+    path('place_review/<int:pk>/', views.PlaceReview.as_view()),
+    path('user_review/<int:phone_number>/', views.UserReview.as_view()),
+    path('score/', views.Score.as_view()),
+    path('review/', views.Review.as_view()),
+    path('friend/', views.CreateFriend.as_view()),
+    path('friend/<int:phone_number>/', views.Friend.as_view()),
+] + static(settings.PHOTOS_URL, document_root=settings.PHOTOS_ROOT)

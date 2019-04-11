@@ -2,10 +2,19 @@ from django.db import models
 from django.utils import timezone
 from enum import Enum
 import os
+import random
 
 
-def get_image_path(instance, filename):
-    return os.path.join('photos', str(instance.id), filename)
+def get_user_image_path(instance, filename):
+    return os.path.join('photos', 'users', str(instance.phone_number), filename)
+
+
+def get_place_image_path(instance, filename):
+    return os.path.join('photos', 'places', str(instance.id), filename)
+
+
+def get_uploaded_image_path(instance, filename):
+    return os.path.join('photos', 'uploaded_images', str(instance.id), filename)
 
 
 class TypePlaceEnum(Enum):
@@ -178,11 +187,11 @@ class TypeCityEnum(Enum):
 
 class User(models.Model):
     phone_number = models.CharField(max_length=11, unique=True)
-    profile_image = models.ImageField(upload_to=get_image_path, blank=True, null=True)
     first_name = models.CharField(max_length=50, null=False)
     last_name = models.CharField(max_length=100, null=True)
     user_score = models.IntegerField(default=0)
     created_date = models.DateTimeField(default=timezone.now)
+    profile_image = models.ImageField(upload_to=get_user_image_path, blank=True, null=True)
 
     def __str__(self):
         return self.phone_number
@@ -190,7 +199,6 @@ class User(models.Model):
 
 class Place(models.Model):
     name = models.CharField(max_length=100, null=False)
-    place_image = models.ImageField(upload_to=get_image_path, blank=True, null=True)
     price_degree = models.IntegerField(default=0)
     address = models.CharField(max_length=500, default="")
     created_date = models.DateTimeField(default=timezone.now)
@@ -199,24 +207,25 @@ class Place(models.Model):
     features = models.CharField(max_length=200, default="")
     state = models.CharField(
         max_length=100,
-        choices=[(tag, tag.value) for tag in TypeStateEnum],
+        choices=[(tag.name, tag.value) for tag in TypeStateEnum],
         null=False
     )
     city = models.CharField(
         max_length=100,
-        choices=[(tag, tag.value) for tag in TypeCityEnum],
+        choices=[(tag.name, tag.value) for tag in TypeCityEnum],
         null=False
     )
+    place_image = models.ImageField(upload_to=get_place_image_path, blank=True, null=True)
 
     def __str__(self):
         return self.name
 
 
 class PlaceType(models.Model):
-    place = models.ForeignKey(Place, on_delete=models.CASCADE, null=False)
+    place = models.ForeignKey(Place, related_name="place_types", on_delete=models.CASCADE, null=False)
     type = models.CharField(
         max_length=50,
-        choices=[(tag, tag.value) for tag in TypePlaceEnum],
+        choices=[(tag.name, tag.value) for tag in TypePlaceEnum],
         null=False
     )
 
@@ -225,8 +234,8 @@ class PlaceType(models.Model):
 
 
 class PlaceScore(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
-    place = models.ForeignKey(Place, on_delete=models.CASCADE, null=False)
+    user = models.ForeignKey(User, related_name="place_scores", on_delete=models.CASCADE, null=False)
+    place = models.ForeignKey(Place, related_name="place_scores", on_delete=models.CASCADE, null=False)
     total_score = models.IntegerField(default=0)
     food_score = models.IntegerField(default=0)
     service_score = models.IntegerField(default=0)
@@ -237,7 +246,7 @@ class PlaceScore(models.Model):
 
 
 class CoordinatePlace(models.Model):
-    place = models.ForeignKey(Place, on_delete=models.CASCADE, null=False)
+    place = models.ForeignKey(Place, related_name="coordinate_place", on_delete=models.CASCADE, null=False)
     latitude = models.FloatField(null=False)
     longitude = models.FloatField(null=False)
 
@@ -246,28 +255,28 @@ class CoordinatePlace(models.Model):
 
 
 class PhonePlace(models.Model):
-    place = models.ForeignKey(Place, on_delete=models.CASCADE, null=False)
-    number = models.CharField(max_length=15, null=False)
+    place = models.ForeignKey(Place, related_name="phones_place", on_delete=models.CASCADE, null=False)
+    phone_number = models.CharField(max_length=15, null=False)
 
     def __str__(self):
-        return self.number
+        return self.phone_number
 
 
 class PlaceImage(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
-    place = models.ForeignKey(Place, on_delete=models.CASCADE, null=False)
-    image = models.ImageField(upload_to=get_image_path, blank=True, null=True)
+    user = models.ForeignKey(User, related_name="place_images", on_delete=models.CASCADE, null=False)
+    place = models.ForeignKey(Place, related_name="place_images", on_delete=models.CASCADE, null=False)
     created_date = models.DateTimeField(default=timezone.now)
     up_vote = models.IntegerField(default=0)
     down_vote = models.IntegerField(default=0)
+    image = models.ImageField(upload_to=get_uploaded_image_path, blank=True, null=True)
 
     def __str__(self):
         return "%s %s" % (self.user, self.place)
 
 
 class FavoritePlace(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
-    place = models.ForeignKey(Place, on_delete=models.CASCADE, null=False)
+    user = models.ForeignKey(User, related_name="favorite_places", on_delete=models.CASCADE, null=False)
+    place = models.ForeignKey(Place, related_name="favorite_places", on_delete=models.CASCADE, null=False)
     created_date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -275,7 +284,7 @@ class FavoritePlace(models.Model):
 
 
 class Menu(models.Model):
-    place = models.ForeignKey(Place, on_delete=models.CASCADE, null=False)
+    place = models.ForeignKey(Place, related_name="menus", on_delete=models.CASCADE, null=False)
     name = models.CharField(max_length=200, null=False)
 
     def __str__(self):
@@ -283,7 +292,7 @@ class Menu(models.Model):
 
 
 class Food(models.Model):
-    menu = models.ForeignKey(Menu, on_delete=models.CASCADE, null=False)
+    menu = models.ForeignKey(Menu, related_name="foods", on_delete=models.CASCADE, null=False)
     name = models.CharField(max_length=200, null=False)
     detail = models.CharField(max_length=200, default="")
     price = models.IntegerField(default=0)
@@ -293,8 +302,8 @@ class Food(models.Model):
 
 
 class Friend(models.Model):
-    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='follower', null=False)
-    following = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following', null=False)
+    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followings', null=False)
+    following = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followers', null=False)
     created_date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -302,8 +311,8 @@ class Friend(models.Model):
 
 
 class Review(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
-    place = models.ForeignKey(Place, on_delete=models.CASCADE, null=False)
+    user = models.ForeignKey(User, related_name="reviews", on_delete=models.CASCADE, null=False)
+    place = models.ForeignKey(Place, related_name="reviews", on_delete=models.CASCADE, null=False)
     text = models.TextField(default="")
     created_date = models.DateTimeField(default=timezone.now)
     up_vote = models.IntegerField(default=0)
@@ -314,8 +323,8 @@ class Review(models.Model):
 
 
 class Hashtag(models.Model):
-    place = models.ForeignKey(Place, on_delete=models.CASCADE, null=False)
-    review = models.ForeignKey(Review, on_delete=models.CASCADE, null=False)
+    place = models.ForeignKey(Place, related_name="hashtags", on_delete=models.CASCADE, null=False)
+    review = models.ForeignKey(Review, related_name="hashtags", on_delete=models.CASCADE, null=False)
     name = models.CharField(max_length=200, null=False)
 
     def __str__(self):

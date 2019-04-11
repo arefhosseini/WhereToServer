@@ -15,5 +15,3 @@ admin.site.register(CoordinatePlace)
 admin.site.register(PhonePlace)
 admin.site.register(PlaceImage)
 admin.site.register(PlaceType)
-
-
