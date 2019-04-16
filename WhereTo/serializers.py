@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Place, PlaceImage, CoordinatePlace, Menu, Food, Review, PlaceScore, Friend
+from .models import User, Place, PlaceImage, CoordinatePlace, Menu, Food, Review, PlaceScore, Friend, FavoritePlace
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -12,7 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('phone_number', 'profile_image', 'first_name', 'last_name', 'user_score',
+        fields = ('id', 'phone_number', 'profile_image', 'first_name', 'last_name', 'user_score',
                   'followers_count', 'followings_count', 'reviews_count', 'place_scores_count',
                   'uploaded_images_count', 'favorite_places_count')
 
@@ -35,10 +35,32 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.favorite_places.count()
 
 
+class PlaceListSerializer(serializers.ModelSerializer):
+    place_types = serializers.SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field='type'
+    )
+    overall_score = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Place
+        fields = ('id', 'name', 'place_types', 'place_image', 'overall_score')
+
+    def get_overall_score(self, obj):
+        all_scores = obj.place_scores.all()
+        average = 0
+        for score in all_scores:
+            average += score.total_score
+        if len(all_scores) > 0:
+            return average / len(all_scores)
+        return 0
+
+
 class PlaceImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlaceImage
-        fields = ('user', 'place', 'up_vote', 'down_vote', 'image', 'created_date')
+        fields = ('user', 'place', 'up_vote', 'down_vote', 'image', 'overall_score')
 
 
 class CoordinatePlaceSerializer(serializers.ModelSerializer):
@@ -84,7 +106,9 @@ class PlaceSerializer(serializers.ModelSerializer):
         average = 0
         for score in all_scores:
             average += score.total_score
-        return average / len(all_scores)
+        if len(all_scores) > 0:
+            return average / len(all_scores)
+        return 0
 
     def get_all_scores_count(self, obj):
         return obj.place_scores.count()
@@ -134,21 +158,27 @@ class PlaceSerializer(serializers.ModelSerializer):
         average = 0
         for score in all_scores:
             average += score.food_score
-        return average / len(all_scores)
+        if len(all_scores) > 0:
+            return average / len(all_scores)
+        return 0
 
     def get_service_score_average(self, obj):
         all_scores = obj.place_scores.all()
         average = 0
         for score in all_scores:
             average += score.service_score
-        return average / len(all_scores)
+        if len(all_scores) > 0:
+            return average / len(all_scores)
+        return 0
 
     def get_ambiance_score_average(self, obj):
         all_scores = obj.place_scores.all()
         average = 0
         for score in all_scores:
             average += score.ambiance_score
-        return average / len(all_scores)
+        if len(all_scores) > 0:
+            return average / len(all_scores)
+        return 0
 
 
 class FoodSerializer(serializers.ModelSerializer):
@@ -303,3 +333,40 @@ class FriendSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('followers', 'followings')
+
+
+class CreatePlaceImageSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PlaceImage
+        fields = ('id', 'user', 'place', 'image')
+
+
+class FavoritePlaceSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FavoritePlace
+        fields = ('id', 'name')
+
+    def get_id(self, obj):
+        return obj.place.id
+
+    def get_name(self, obj):
+        return obj.place.name
+
+
+class FavoritePlacesSerializer(serializers.ModelSerializer):
+    favorite_places = FavoritePlaceSerializer(many=True)
+
+    class Meta:
+        model = User
+        fields = ('id', 'favorite_places')
+
+
+class CreateFavoritePlace(serializers.ModelSerializer):
+
+    class Meta:
+        model = FavoritePlace
+        fields = ('id', 'user', 'place')

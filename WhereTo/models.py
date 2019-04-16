@@ -17,6 +17,10 @@ def get_uploaded_image_path(instance, filename):
     return os.path.join('photos', 'uploaded_images', str(instance.id), filename)
 
 
+user_image_path_default = os.path.join('photos', 'users', 'default.png')
+place_image_path_default = os.path.join('photos', 'places', 'default.png')
+
+
 class TypePlaceEnum(Enum):
     Irani = "ایرانی"
     Italian = "ایتالیایی"
@@ -188,10 +192,11 @@ class TypeCityEnum(Enum):
 class User(models.Model):
     phone_number = models.CharField(max_length=11, unique=True)
     first_name = models.CharField(max_length=50, null=False)
-    last_name = models.CharField(max_length=100, null=True)
+    last_name = models.CharField(max_length=100, null=True, blank=True)
     user_score = models.IntegerField(default=0)
     created_date = models.DateTimeField(default=timezone.now)
-    profile_image = models.ImageField(upload_to=get_user_image_path, blank=True, null=True)
+    profile_image = models.ImageField(upload_to=get_user_image_path, blank=True,
+                                      null=True, default=user_image_path_default)
 
     def __str__(self):
         return self.phone_number
@@ -200,11 +205,11 @@ class User(models.Model):
 class Place(models.Model):
     name = models.CharField(max_length=100, null=False)
     price_degree = models.IntegerField(default=0)
-    address = models.CharField(max_length=500, default="")
+    address = models.CharField(max_length=500, default="", null=True, blank=True)
     created_date = models.DateTimeField(default=timezone.now)
-    open_hours = models.TextField(default="")
-    price = models.CharField(max_length=100, default="")
-    features = models.CharField(max_length=200, default="")
+    open_hours = models.TextField(default="", null=True, blank=True)
+    price = models.CharField(max_length=100, default="", null=True, blank=True)
+    features = models.CharField(max_length=200, default="", null=True, blank=True)
     state = models.CharField(
         max_length=100,
         choices=[(tag.name, tag.value) for tag in TypeStateEnum],
@@ -215,7 +220,8 @@ class Place(models.Model):
         choices=[(tag.name, tag.value) for tag in TypeCityEnum],
         null=False
     )
-    place_image = models.ImageField(upload_to=get_place_image_path, blank=True, null=True)
+    place_image = models.ImageField(upload_to=get_place_image_path, blank=True,
+                                    null=True, default=place_image_path_default)
 
     def __str__(self):
         return self.name
@@ -294,7 +300,7 @@ class Menu(models.Model):
 class Food(models.Model):
     menu = models.ForeignKey(Menu, related_name="foods", on_delete=models.CASCADE, null=False)
     name = models.CharField(max_length=200, null=False)
-    detail = models.CharField(max_length=200, default="")
+    detail = models.CharField(max_length=200, default="", null=True, blank=True)
     price = models.IntegerField(default=0)
 
     def __str__(self):
@@ -313,7 +319,7 @@ class Friend(models.Model):
 class Review(models.Model):
     user = models.ForeignKey(User, related_name="reviews", on_delete=models.CASCADE, null=False)
     place = models.ForeignKey(Place, related_name="reviews", on_delete=models.CASCADE, null=False)
-    text = models.TextField(default="")
+    text = models.TextField(default="", null=False)
     created_date = models.DateTimeField(default=timezone.now)
     up_vote = models.IntegerField(default=0)
     down_vote = models.IntegerField(default=0)
