@@ -60,7 +60,7 @@ class PlaceListSerializer(serializers.ModelSerializer):
 class PlaceImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlaceImage
-        fields = ('user', 'place', 'up_vote', 'down_vote', 'image', 'overall_score')
+        fields = ('user', 'place', 'up_vote', 'down_vote', 'image')
 
 
 class CoordinatePlaceSerializer(serializers.ModelSerializer):

@@ -21,14 +21,14 @@ user_image_path_default = os.path.join('photos', 'users', 'default.png')
 place_image_path_default = os.path.join('photos', 'places', 'default.png')
 
 
-class TypePlaceEnum(Enum):
+class PlaceTypeEnum(Enum):
     Irani = "ایرانی"
     Italian = "ایتالیایی"
     Cafe = "کافه"
     FastFood = "فست فود"
 
 
-class TypeStateEnum(Enum):
+class StateTypeEnum(Enum):
     AzarbayejanSharghi = "آذربایجان شرقی"
     AzarbayejanGharbi = "آذربایجان غربی"
     Ardebil = "اردبیل"
@@ -62,6 +62,7 @@ class TypeStateEnum(Enum):
     Yazd = "یزد"
 
 
+# noinspection SpellCheckingInspection
 class TypeCityEnum(Enum):
     Tabriz = "تبریز"
     Maraghe = "	مراغه"
@@ -212,7 +213,7 @@ class Place(models.Model):
     features = models.CharField(max_length=200, default="", null=True, blank=True)
     state = models.CharField(
         max_length=100,
-        choices=[(tag.name, tag.value) for tag in TypeStateEnum],
+        choices=[(tag.name, tag.value) for tag in StateTypeEnum],
         null=False
     )
     city = models.CharField(
@@ -231,7 +232,7 @@ class PlaceType(models.Model):
     place = models.ForeignKey(Place, related_name="place_types", on_delete=models.CASCADE, null=False)
     type = models.CharField(
         max_length=50,
-        choices=[(tag.name, tag.value) for tag in TypePlaceEnum],
+        choices=[(tag.name, tag.value) for tag in PlaceTypeEnum],
         null=False
     )
 
