@@ -1,8 +1,8 @@
+import os
+from enum import Enum
+
 from django.db import models
 from django.utils import timezone
-from enum import Enum
-import os
-import random
 
 
 def get_user_image_path(instance, filename):
@@ -17,8 +17,8 @@ def get_uploaded_image_path(instance, filename):
     return os.path.join('photos', 'uploaded_images', str(instance.id), filename)
 
 
-user_image_path_default = os.path.join('photos', 'users', 'default.png')
-place_image_path_default = os.path.join('photos', 'places', 'default.png')
+user_image_path_default = 'photos/users/default.png'
+place_image_path_default = 'photos/places/default.png'
 
 
 class PlaceTypeEnum(Enum):

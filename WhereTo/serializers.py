@@ -69,6 +69,13 @@ class CoordinatePlaceSerializer(serializers.ModelSerializer):
         fields = ('latitude', 'longitude')
 
 
+class PlaceScoreSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PlaceScore
+        fields = ('id', 'user', 'place', 'total_score', 'food_score', 'service_score', 'ambiance_score')
+
+
 class PlaceSerializer(serializers.ModelSerializer):
     place_types = serializers.SlugRelatedField(
         many=True,
@@ -259,13 +266,6 @@ class UserReviewsSerializer(serializers.ModelSerializer):
         fields = ('phone_number', 'reviews')
 
 
-class ScoreSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = PlaceScore
-        fields = ('id', 'user', 'place', 'total_score', 'food_score', 'service_score', 'ambiance_score')
-
-
 class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -365,7 +365,7 @@ class FavoritePlacesSerializer(serializers.ModelSerializer):
         fields = ('id', 'favorite_places')
 
 
-class CreateFavoritePlace(serializers.ModelSerializer):
+class CreateFavoritePlaceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FavoritePlace
