@@ -1,7 +1,8 @@
 from django.contrib import admin
-from .models import User, Place, Review, PlaceScore, Hashtag, Menu, Friend
+from .models import User, Place, Review, PlaceScore, Hashtag, Menu, Friend, Token
 from .models import FavoritePlace, Food, CoordinatePlace, PhonePlace, PlaceImage, PlaceType
 
+admin.site.register(Token)
 admin.site.register(User)
 admin.site.register(Place)
 admin.site.register(Review)

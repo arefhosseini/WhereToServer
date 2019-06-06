@@ -1,5 +1,12 @@
 from rest_framework import serializers
-from .models import User, Place, PlaceImage, CoordinatePlace, Menu, Food, Review, PlaceScore, Friend, FavoritePlace
+from .models import User, Place, PlaceImage, CoordinatePlace, Menu, Food, Review, PlaceScore, Friend, FavoritePlace, \
+    Token
+
+
+class TokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Token
+        fields = ('phone_number', 'verify_code')
 
 
 class UserSerializer(serializers.ModelSerializer):

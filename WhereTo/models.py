@@ -190,10 +190,18 @@ class TypeCityEnum(Enum):
     Hamidia = "حمیدیا"
 
 
+class Token(models.Model):
+    phone_number = models.CharField(max_length=11, unique=True)
+    verify_code = models.CharField(max_length=5, null=False)
+
+    def __str__(self):
+        return "%s %s" % (self.phone_number, self.verify_code)
+
+
 class User(models.Model):
     phone_number = models.CharField(max_length=11, unique=True)
-    first_name = models.CharField(max_length=50, null=False)
-    last_name = models.CharField(max_length=100, null=True, blank=True)
+    first_name = models.CharField(max_length=50, null=True)
+    last_name = models.CharField(max_length=100, null=True)
     user_score = models.IntegerField(default=0)
     created_date = models.DateTimeField(default=timezone.now)
     profile_image = models.ImageField(upload_to=get_user_image_path, blank=True,

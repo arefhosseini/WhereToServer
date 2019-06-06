@@ -21,6 +21,7 @@ from django.conf.urls.static import static
 from WhereTo import views
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('verify/', views.Verify.as_view()),
     path('user/', views.UserList.as_view()),
     path('user/<int:phone_number>/', views.UserDetail.as_view()),
     path('places/<int:phone_number>/', views.PlaceList.as_view()),

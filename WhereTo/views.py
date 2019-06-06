@@ -3,23 +3,43 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import User, Place, FavoritePlace, PlaceScore, Friend
+from .models import User, Place, FavoritePlace, PlaceScore, Friend, Token
 from .serializers import UserSerializer, PlaceSerializer, MenusSerializer, PlaceReviewsSerializer, \
     UserReviewsSerializer, PlaceScoreSerializer, ReviewSerializer, FriendSerializer, CreateFriendSerializer, \
     CreatePlaceImageSerializer, FavoritePlacesSerializer, \
-    PlaceListSerializer, CreateFavoritePlaceSerializer
+    PlaceListSerializer, CreateFavoritePlaceSerializer, TokenSerializer
+
+
+class Verify(APIView):
+    """
+    Verify phone number with token
+    """
+    def post(self, request):
+        verify_code = get_verify_code(request.data.get('phone_number'))
+        token = get_token(request.data.get('phone_number'))
+        data = request.data.copy()
+        data["verify_code"] = verify_code
+        if token is None:
+            serializer = TokenSerializer(data=data)
+        else:
+            serializer = TokenSerializer(token, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserList(APIView):
     """
-    Create, Edit, Delete a User
+    Create, Edit, Delete User
     """
     def post(self, request):
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if verify_user(request.data):
+            serializer = UserSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, format=None):
         user = get_user(request.data.get('phone_number'))
@@ -70,7 +90,7 @@ class PlaceDetail(APIView):
         score_data["user"] = user.phone_number
         return Response({
             "place": place_serializer.data,
-            "score": score_data
+            "place_score": score_data
         })
 
 
@@ -234,6 +254,25 @@ class EditFavoritePlace(APIView):
         favorite_place = get_favorite_place(request.data.get('user'), request.data.get('place'))
         favorite_place.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def get_verify_code(phone_number):
+    return "55555"
+
+
+def get_token(phone_number):
+    try:
+        return Token.objects.get(phone_number=phone_number)
+    except Token.DoesNotExist:
+        return None
+
+
+def verify_user(data):
+    try:
+        Token.objects.get(phone_number=data.get("phone_number"), verify_code=data.get("verify_code"))
+        return True
+    except Token.DoesNotExist:
+        raise Http404
 
 
 def get_user(phone_number):
