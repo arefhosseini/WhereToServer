@@ -34,12 +34,14 @@ class UserList(APIView):
     Create, Edit, Delete User
     """
     def post(self, request):
-        if verify_user(request.data):
-            serializer = UserSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            user = get_user(request.data.get('phone_number'))
+            serializer = UserSerializer(user)
+            return Response(serializer.data)
 
     def put(self, request, format=None):
         user = get_user(request.data.get('phone_number'))
@@ -53,6 +55,17 @@ class UserList(APIView):
         user = get_user(request.data.get('phone_number'))
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UploadUserProfile(APIView):
+    def post(self, request):
+        print(request.data)
+        user = get_user(request.data.get('phone_number'))
+        serializer = UserSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"status": "ok"})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserDetail(APIView):
@@ -84,7 +97,7 @@ class PlaceDetail(APIView):
     def get(self, request, phone_number, pk, format=None):
         user = get_user(phone_number)
         place = get_place(pk)
-        place_score = get_place_score(user, place)
+        place_score = check_place_score(user, place)
         place_serializer = PlaceSerializer(place)
         score_data = PlaceScoreSerializer(place_score).data.copy()
         score_data["user"] = user.phone_number
@@ -135,7 +148,7 @@ class ScoreDetail(APIView):
     def post(self, request):
         user = get_user(request.data.get('user'))
         place = get_place(request.data.get('place'))
-        place_score = get_place_score(user, place)
+        place_score = check_place_score(user, place)
         data = request.data.copy()
         data["user"] = user.id
         if place_score is None:
@@ -187,7 +200,7 @@ class EditFriend(APIView):
     def post(self, request):
         follower_user = get_user(request.data.get("follower"))
         following_user = get_user(request.data.get("following"))
-        friend = get_friend(follower_user, following_user)
+        friend = check_friend(follower_user, following_user)
         if friend is None:
             data = request.data.copy()
             data["follower"] = follower_user.id
@@ -237,7 +250,7 @@ class EditFavoritePlace(APIView):
     def post(self, request):
         user = get_user(request.data.get("user"))
         place = get_place(request.data.get("place"))
-        favorite_place = get_favorite_place(user, place)
+        favorite_place = check_favorite_place(user, place)
         if favorite_place is None:
             data = request.data.copy()
             data["user"] = user.id
@@ -267,14 +280,6 @@ def get_token(phone_number):
         return None
 
 
-def verify_user(data):
-    try:
-        Token.objects.get(phone_number=data.get("phone_number"), verify_code=data.get("verify_code"))
-        return True
-    except Token.DoesNotExist:
-        raise Http404
-
-
 def get_user(phone_number):
     try:
         return User.objects.get(phone_number=phone_number)
@@ -296,11 +301,11 @@ def get_place_score(pk):
         raise Http404
 
 
-def get_place_score(user, place):
+def check_place_score(user, place):
     try:
         return PlaceScore.objects.get(user=user, place=place)
     except PlaceScore.DoesNotExist:
-        raise None
+        return None
     
 
 def get_friend(follower_phone_number, following_phone_number):
@@ -310,7 +315,7 @@ def get_friend(follower_phone_number, following_phone_number):
         raise Http404
 
 
-def get_friend(follower_user, following_user):
+def check_friend(follower_user, following_user):
     try:
         return Friend.objects.get(follower=follower_user, following=following_user)
     except Friend.DoesNotExist:
@@ -324,7 +329,7 @@ def get_favorite_place(user_phone_number, place_id):
         raise Http404
 
 
-def get_favorite_place(user, place):
+def check_favorite_place(user, place):
     try:
         return FavoritePlace.objects.get(user=user, place=place)
     except FavoritePlace.DoesNotExist:
