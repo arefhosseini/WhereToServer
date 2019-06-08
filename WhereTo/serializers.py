@@ -342,7 +342,7 @@ class FriendSerializer(serializers.ModelSerializer):
         fields = ('followers', 'followings')
 
 
-class CreatePlaceImageSerializer(serializers.ModelSerializer):
+class UploadPlaceImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PlaceImage

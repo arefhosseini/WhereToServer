@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from .models import User, Place, FavoritePlace, PlaceScore, Friend, Token
 from .serializers import UserSerializer, PlaceSerializer, MenusSerializer, PlaceReviewsSerializer, \
     UserReviewsSerializer, PlaceScoreSerializer, ReviewSerializer, FriendSerializer, CreateFriendSerializer, \
-    CreatePlaceImageSerializer, FavoritePlacesSerializer, \
+    UploadPlaceImageSerializer, FavoritePlacesSerializer, \
     PlaceListSerializer, CreateFavoritePlaceSerializer, TokenSerializer
 
 
@@ -59,7 +59,6 @@ class UserList(APIView):
 
 class UploadUserProfile(APIView):
     def post(self, request):
-        print(request.data)
         user = get_user(request.data.get('phone_number'))
         serializer = UserSerializer(user, data=request.data)
         if serializer.is_valid():
@@ -72,10 +71,21 @@ class UserDetail(APIView):
     """
     Retrieve user.
     """
-    def get(self, request, phone_number, format=None):
-        user = get_user(phone_number)
+    def get(self, request, your_phone_number, user_phone_number, format=None):
+        your_user = get_user(your_phone_number)
+        user = get_user(user_phone_number)
         serializer = UserSerializer(user)
-        return Response(serializer.data)
+        is_following = check_friend(your_user, user)
+        data = serializer.data.copy()
+        if data["first_name"] is None:
+            data["first_name"] = ""
+        if data["last_name"] is None:
+            data["last_name"] = ""
+        if is_following is None:
+            data["is_following"] = 0
+        else:
+            data["is_following"] = 1
+        return Response(data)
 
 
 class PlaceList(APIView):
@@ -101,9 +111,22 @@ class PlaceDetail(APIView):
         place_serializer = PlaceSerializer(place)
         score_data = PlaceScoreSerializer(place_score).data.copy()
         score_data["user"] = user.phone_number
+        if score_data["total_score"] is None:
+            score_data["total_score"] = 0
+        if score_data["food_score"] is None:
+            score_data["food_score"] = 0
+        if score_data["service_score"] is None:
+            score_data["service_score"] = 0
+        if score_data["ambiance_score"] is None:
+            score_data["ambiance_score"] = 0
+        if check_favorite_place(user, place) is None:
+            is_favorite = 0
+        else:
+            is_favorite = 1
         return Response({
             "place": place_serializer.data,
-            "place_score": score_data
+            "place_score": score_data,
+            "is_favorite": is_favorite
         })
 
 
@@ -175,7 +198,11 @@ class ReviewDetail(APIView):
     Create new review.
     """
     def post(self, request):
-        serializer = ReviewSerializer(data=request.data)
+        user = get_user(request.data.get('user'))
+        place = get_place(request.data.get('place'))
+        data = request.data.copy()
+        data["user"] = user.id
+        serializer = ReviewSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -186,11 +213,22 @@ class GetFriend(APIView):
     """
     Retrieve friend list.
     """
-    def get(self, request, phone_number, format=None):
-        user = get_user(phone_number)
-
+    def get(self, request, your_phone_number, user_phone_number, format=None):
+        user = get_user(user_phone_number)
+        your_user = get_user(your_phone_number)
         serializer = FriendSerializer(user)
-        return Response(serializer.data)
+        data = serializer.data.copy()
+        for friend_data in data["followers"]:
+            if check_friend(your_user, get_user(friend_data["phone_number"])) is None:
+                friend_data["is_following"] = 0
+            else:
+                friend_data["is_following"] = 1
+        for friend_data in data["followings"]:
+            if check_friend(your_user, get_user(friend_data["phone_number"])) is None:
+                friend_data["is_following"] = 0
+            else:
+                friend_data["is_following"] = 1
+        return Response(data)
 
 
 class EditFriend(APIView):
@@ -220,15 +258,19 @@ class EditFriend(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class CreatePlaceImage(APIView):
+class UploadPlaceImage(APIView):
     """
     Upload Place Image.
     """
     def post(self, request):
-        serializer = CreatePlaceImageSerializer(data=request.data)
+        user = get_user(request.data.get('user'))
+        data = request.data.copy()
+        data['user'] = user.id
+        data['place'] = int(request.data.get('place'))
+        serializer = UploadPlaceImageSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -254,7 +296,7 @@ class EditFavoritePlace(APIView):
         if favorite_place is None:
             data = request.data.copy()
             data["user"] = user.id
-            serializer = CreateFavoritePlaceSerializer(data=request.data)
+            serializer = CreateFavoritePlaceSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)

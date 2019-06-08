@@ -200,8 +200,8 @@ class Token(models.Model):
 
 class User(models.Model):
     phone_number = models.CharField(max_length=11, unique=True)
-    first_name = models.CharField(max_length=50, null=True)
-    last_name = models.CharField(max_length=100, null=True)
+    first_name = models.CharField(max_length=50, default="", blank=True)
+    last_name = models.CharField(max_length=100, default="", blank=True)
     user_score = models.IntegerField(default=0)
     created_date = models.DateTimeField(default=timezone.now)
     profile_image = models.ImageField(upload_to=get_user_image_path, blank=True,
@@ -214,11 +214,11 @@ class User(models.Model):
 class Place(models.Model):
     name = models.CharField(max_length=100, null=False)
     price_degree = models.IntegerField(default=0)
-    address = models.CharField(max_length=500, default="", null=True, blank=True)
+    address = models.CharField(max_length=500, default="", blank=True)
     created_date = models.DateTimeField(default=timezone.now)
-    open_hours = models.TextField(default="", null=True, blank=True)
-    price = models.CharField(max_length=100, default="", null=True, blank=True)
-    features = models.CharField(max_length=200, default="", null=True, blank=True)
+    open_hours = models.TextField(default="", blank=True)
+    price = models.CharField(max_length=100, default="", blank=True)
+    features = models.CharField(max_length=200, default="", blank=True)
     state = models.CharField(
         max_length=100,
         choices=[(tag.name, tag.value) for tag in StateTypeEnum],
@@ -309,7 +309,7 @@ class Menu(models.Model):
 class Food(models.Model):
     menu = models.ForeignKey(Menu, related_name="foods", on_delete=models.CASCADE, null=False)
     name = models.CharField(max_length=200, null=False)
-    detail = models.CharField(max_length=200, default="", null=True, blank=True)
+    detail = models.CharField(max_length=200, default="", blank=True)
     price = models.IntegerField(default=0)
 
     def __str__(self):
