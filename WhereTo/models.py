@@ -6,19 +6,19 @@ from django.utils import timezone
 
 
 def get_user_image_path(instance, filename):
-    return os.path.join('photos', 'users', str(instance.phone_number), filename)
+    return os.path.join('media', 'photos', 'users', str(instance.phone_number), filename)
 
 
 def get_place_image_path(instance, filename):
-    return os.path.join('photos', 'places', str(instance.id), filename)
+    return os.path.join('media', 'photos', 'places', str(instance.id), filename)
 
 
 def get_uploaded_image_path(instance, filename):
-    return os.path.join('photos', 'uploaded_images', str(instance.id), filename)
+    return os.path.join('media', 'photos', 'uploaded_images', str(instance.id), filename)
 
 
-user_image_path_default = 'photos/users/default.png'
-place_image_path_default = 'photos/places/default.png'
+user_image_path_default = 'media/photos/users/default.png'
+place_image_path_default = 'media/photos/places/default.png'
 
 
 class PlaceTypeEnum(Enum):
@@ -316,7 +316,7 @@ class Food(models.Model):
         return self.name
 
 
-class Friend(models.Model):
+class Relation(models.Model):
     follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followings', null=False)
     following = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followers', null=False)
     created_date = models.DateTimeField(default=timezone.now)
@@ -344,3 +344,15 @@ class Hashtag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class FavoritePlaceType(models.Model):
+    user = models.ForeignKey(User, related_name="favorite_place_types", on_delete=models.CASCADE, null=False)
+    type = models.CharField(
+        max_length=50,
+        choices=[(tag.name, tag.value) for tag in PlaceTypeEnum],
+        null=False
+    )
+
+    def __str__(self):
+        return self.type

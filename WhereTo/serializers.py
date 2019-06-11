@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import User, Place, PlaceImage, CoordinatePlace, Menu, Food, Review, PlaceScore, Friend, FavoritePlace, \
-    Token
+from .models import User, Place, PlaceImage, CoordinatePlace, Menu, Food, Review, PlaceScore, Relation, FavoritePlace, \
+    Token, FavoritePlaceType
 
 
 class TokenSerializer(serializers.ModelSerializer):
@@ -42,6 +42,13 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.favorite_places.count()
 
 
+class SimpleUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ('phone_number', 'profile_image', 'first_name', 'last_name')
+
+
 class PlaceListSerializer(serializers.ModelSerializer):
     place_types = serializers.SlugRelatedField(
         many=True,
@@ -49,10 +56,11 @@ class PlaceListSerializer(serializers.ModelSerializer):
         slug_field='type'
     )
     overall_score = serializers.SerializerMethodField()
+    all_scores_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Place
-        fields = ('id', 'name', 'place_types', 'place_image', 'overall_score')
+        fields = ('id', 'name', 'place_types', 'place_image', 'overall_score', 'all_scores_count')
 
     def get_overall_score(self, obj):
         all_scores = obj.place_scores.all()
@@ -62,6 +70,9 @@ class PlaceListSerializer(serializers.ModelSerializer):
         if len(all_scores) > 0:
             return average / len(all_scores)
         return 0
+
+    def get_all_scores_count(self, obj):
+        return obj.place_scores.count()
 
 
 class PlaceImageSerializer(serializers.ModelSerializer):
@@ -283,7 +294,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 class CreateFriendSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Friend
+        model = Relation
         fields = ('id', 'follower', 'following')
 
 
@@ -294,7 +305,7 @@ class FollowersSerializer(serializers.ModelSerializer):
     profile_image = serializers.SerializerMethodField()
 
     class Meta:
-        model = Friend
+        model = Relation
         fields = ('phone_number', 'first_name', 'last_name', 'profile_image')
 
     def get_phone_number(self, obj):
@@ -317,7 +328,7 @@ class FollowingsSerializer(serializers.ModelSerializer):
     profile_image = serializers.SerializerMethodField()
 
     class Meta:
-        model = Friend
+        model = Relation
         fields = ('phone_number', 'first_name', 'last_name', 'profile_image')
 
     def get_phone_number(self, obj):
@@ -333,7 +344,7 @@ class FollowingsSerializer(serializers.ModelSerializer):
         return obj.following.profile_image.name
 
 
-class FriendSerializer(serializers.ModelSerializer):
+class RelationSerializer(serializers.ModelSerializer):
     followers = FollowersSerializer(many=True)
     followings = FollowingsSerializer(many=True)
 
@@ -352,16 +363,20 @@ class UploadPlaceImageSerializer(serializers.ModelSerializer):
 class FavoritePlaceSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
+    place_image = serializers.SerializerMethodField()
 
     class Meta:
         model = FavoritePlace
-        fields = ('id', 'name')
+        fields = ('id', 'name', 'place_image')
 
     def get_id(self, obj):
         return obj.place.id
 
     def get_name(self, obj):
         return obj.place.name
+
+    def get_place_image(self, obj):
+        return str(obj.place.place_image)
 
 
 class FavoritePlacesSerializer(serializers.ModelSerializer):
@@ -377,3 +392,10 @@ class CreateFavoritePlaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = FavoritePlace
         fields = ('id', 'user', 'place')
+
+
+class FavoritePlaceTypeSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FavoritePlaceType
+        fields = ('user', 'type')

@@ -33,8 +33,10 @@ urlpatterns = [
     path('user_review/<str:phone_number>/', views.UserReviewDetail.as_view()),
     path('score/', views.ScoreDetail.as_view()),
     path('review/', views.ReviewDetail.as_view()),
-    path('friend/', views.EditFriend.as_view()),
-    path('friend/<str:your_phone_number>/<str:user_phone_number>/', views.GetFriend.as_view()),
+    path('relation/', views.EditRelation.as_view()),
+    path('relation/<str:your_phone_number>/<str:user_phone_number>/', views.GetRelation.as_view()),
     path('favorite_place/<str:phone_number>/', views.GetFavoritePlace.as_view()),
     path('favorite_place/', views.EditFavoritePlace.as_view()),
-] + static(settings.PHOTOS_URL, document_root=settings.PHOTOS_ROOT)
+    path('favorite_place_type/', views.EditFavoritePlaceType.as_view()),
+    path('search/<str:text>/', views.Search.as_view()),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
