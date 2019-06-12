@@ -1,2 +1,3 @@
 # WhereToServer
-DJango Server
+API Documentation Link:
+  https://wheretoserver.docs.apiary.io/
