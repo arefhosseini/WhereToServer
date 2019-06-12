@@ -1,80 +1,694 @@
 FORMAT: 1A
-HOST: http://polls.apiblueprint.org/
+HOST: http://localhost/
 
 # WhereTo
 
 Polls is a simple API allowing consumers to view polls and vote in them.
 
-## Questions Collection [/questions]
+# Group User
 
-### List All Questions [GET]
+This is the first group of resources in this document. It is **recognized** by
+the **keyword `group`** and its name is `Messages`.
 
-+ Response 200 (application/json)
+## User Control [/user/]
 
-        [
-            {
-                "question": "Favourite programming language?",
-                "published_at": "2015-08-05T08:40:51.620Z",
-                "choices": [
-                    {
-                        "choice": "Swift",
-                        "votes": 2048
-                    }, {
-                        "choice": "Python",
-                        "votes": 1024
-                    }, {
-                        "choice": "Objective-C",
-                        "votes": 512
-                    }, {
-                        "choice": "Ruby",
-                        "votes": 256
-                    }
-                ]
-            }
-        ]
-
-### Create a New Question [POST]
-
-You may create your own question using this action. It takes a JSON
-object containing a question and a collection of answers in the
-form of choices.
+### Create [POST]
 
 + Request (application/json)
 
         {
-            "question": "Favourite programming language?",
-            "choices": [
-                "Swift",
-                "Python",
-                "Objective-C",
-                "Ruby"
-            ]
+            "phone_number": "09215206388"
         }
 
-+ Response 201 (application/json)
-
-    + Headers
-
-            Location: /questions/2
++ Response 200 (application/json)
 
     + Body
 
             {
-                "question": "Favourite programming language?",
-                "published_at": "2015-08-05T08:40:51.620Z",
-                "choices": [
+                "status": "ok"
+            }
+
+### Edit [PUT]
+
++ Request (application/json)
+
+        {
+            "phone_number": "5421",
+            "first_name": "",
+            "last_name": "",
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "status": "ok"
+            }
+
+### Remove [DELETE]
+
++ Request (application/json)
+
+        {
+            "phone_number": "5421"
+        }
+
++ Response 204
+
+## Verify User [/user/verify/]
+
+### Verify [POST]
+
++ Request (application/json)
+
+        {
+            "phone_number": "5421"
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "phone_number": "5421",
+                "verify_code": "55555"
+            }
+
+## Profile Image Control [/user/profile_image/]
+
+### Upload [POST]
+
++ Request (application/json)
+
+        {
+            "phone_number": "5421",
+            "profile_image": "data"
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "status": "ok"
+            }
+
+## User Relation Control [/user/relation/]
+
+### Create [POST]
+
++ Request (application/json)
+
+        {
+            "follower": "09215206388",
+            "following": "09215206300"
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "status": "ok"
+            }
+
+### Remove [DELETE]
+
++ Request (application/json)
+
+        {
+            "follower": "09215206388",
+            "following": "09215206300"
+        }
+
++ Response 204
+
+## Favorite Place Control [/user/favorite_place/]
+
+### Create [POST]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "place": 1
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "status": "ok"
+            }
+
+### Remove [DELETE]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "place": 1
+        }
+
++ Response 204
+
+## Favorite Place Type Control [/user/favorite_place_type/]
+
+### Create [POST]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "type": "Irani" 
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "status": "ok"
+            }
+
+### Remove [DELETE]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "type": "Irani"
+        }
+
++ Response 204
+
+## Signle User [/user/{your_phone_number}/{user_phone_number}/]
+
+### Get [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "id": 23,
+                "phone_number": "09215206388",
+                "profile_image": "/media/photos/users/09215206388/cropped8713264702468530527.jpg",
+                "first_name": "عارف",
+                "last_name": "حسینی",
+                "user_score": 38,
+                "followers_count": 1,
+                "followings_count": 1,
+                "reviews_count": 9,
+                "place_scores_count": 1,
+                "uploaded_images_count": 1,
+                "favorite_places_count": 1,
+                "favorite_place_types": [
+                    "Italian",
+                    "Irani"
+                ],
+                "is_following": 0
+            }
+
+## Reviews List [/user/{your_phone_number}/{user_phone_number}/review/]
+
+### Get [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "phone_number": "09215206388",
+                "reviews": [
                     {
-                        "choice": "Swift",
-                        "votes": 0
-                    }, {
-                        "choice": "Python",
-                        "votes": 0
-                    }, {
-                        "choice": "Objective-C",
-                        "votes": 0
-                    }, {
-                        "choice": "Ruby",
-                        "votes": 0
+                        "id": 9,
+                        "text": "توپ",
+                        "created_date": 1559954645.73161,
+                        "up_votes": 0,
+                        "down_votes": 0,
+                        "place_id": 1,
+                        "place_name": "آقای پیتزا",
+                        "place_image": "/media/photos/places/None/photo_2018-12-02_18-14-44.jpg",
+                        "your_vote": 0
+                    }
+                ]
+            }
+
+## Place Scores List [/user/{your_phone_number}/{user_phone_number}/place_score/]
+
+### Get [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "phone_number": "09215206388",
+                "place_scores": [
+                    {
+                        "total_score": 4,
+                        "food_score": 4,
+                        "service_score": 4,
+                        "ambiance_score": 4,
+                        "place_id": 1,
+                        "place_name": "آقای پیتزا",
+                        "place_image": "/media/photos/places/None/photo_2018-12-02_18-14-44.jpg"
+                    }
+                ]
+            }
+
+## Relation List [/user/{your_phone_number}/{user_phone_number}/relation/]
+
+### Get [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "followers": [
+                    {
+                        "phone_number": "09215201245",
+                        "first_name": "تاریخ",
+                        "last_name": "دانلود",
+                        "profile_image": "/media/photos/users/default.png",
+                        "is_following": 1
+                    }
+                ],
+                "followings": [
+                    {
+                        "phone_number": "09215201245",
+                        "first_name": "تاریخ",
+                        "last_name": "دانلود",
+                        "profile_image": "/media/photos/users/default.png",
+                        "is_following": 1
+                    }
+                ]
+            }
+
+## Uploaded Images List [/user/{your_phone_number}/{user_phone_number}/image/]
+
+### Get [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "phone_number": "09215206388",
+                "place_images": [
+                    {
+                        "id": 5,
+                        "image": "/media/photos/uploaded_images/None/cropped1092610918506555346.jpg",
+                        "place_id": 1,
+                        "place_name": "آقای پیتزا",
+                        "up_votes": 1,
+                        "down_votes": 0,
+                        "your_vote": 1
+                    }
+                ]
+            }
+
+## Favorite Places List [/user/{your_phone_number}/{user_phone_number}/favorite_place/]
+
+### Get [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "id": 23,
+                "favorite_places": [
+                    {
+                        "id": 1,
+                        "name": "آقای پیتزا",
+                        "place_image": "/media/photos/places/None/photo_2018-12-02_18-14-44.jpg"
+                    }
+                ]
+            }
+
+# Group Place
+
+## Place Image Control [/place/image/]
+
+### Create [POST]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "place": 1,
+            "image": "data"
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "status": "ok"
+            }
+
+## Place Review Control [/place/review/]
+
+### Create [POST]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "place": 1,
+            "text": "text"
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "status": "ok"
+            }
+
+## Place Score Control [/place/score/]
+
+### Create [POST]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "place": 1,
+            "total_score": 4,
+            "food_score": 4,
+            "service_score": 4,
+            "ambiance_score": 4
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "status": "ok"
+            }
+
+### Edit [PUT]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "place": 1,
+            "total_score": 4,
+            "food_score": 4,
+            "service_score": 4,
+            "ambiance_score": 4
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "status": "ok"
+            }
+
+## Place Image Vote Control [/place/image/vote/]
+
+### Create [POST]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "place_image": 5,
+            "vote": 1
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "status": "ok"
+            }
+
+### Remove [DELETE]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "place_image": 5,
+        }
+
++ Response 204
+
+## Review Vote Control [/place/review/vote/]
+
+### Create [POST]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "review": 9,
+            "vote": 1
+        }
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "status": "ok"
+            }
+
+### Remove [DELETE]
+
++ Request (application/json)
+
+        {
+            "user": "09215206388",
+            "review": 9
+        }
+
++ Response 204
+
+## Places List [/place/{phone_number}/]
+
+### Get [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "total_places": [
+                    {
+                        "id": 1,
+                        "name": "آقای پیتزا",
+                        "place_types": [
+                            "Italian",
+                            "FastFood",
+                            "Italian"
+                        ],
+                        "place_image": "/media/photos/places/None/photo_2018-12-02_18-14-44.jpg",
+                        "overall_score": 4.5,
+                        "all_scores_count": 2
+                    }
+                ],
+                "suggested_places": [
+                    {
+                        "id": 1,
+                        "name": "آقای پیتزا",
+                        "place_types": [
+                            "Italian",
+                            "FastFood",
+                            "Italian"
+                        ],
+                        "place_image": "/media/photos/places/None/photo_2018-12-02_18-14-44.jpg",
+                        "overall_score": 4.5,
+                        "all_scores_count": 2
+                    }
+                ]
+            }
+
+## Single Place [/place/{phone_number}/{id}]
+
+### Get [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "place": {
+                    "id": 1,
+                    "name": "آقای پیتزا",
+                    "price_degree": 2,
+                    "address": "نارمک- خیابان فرجام- خیابان رشید- کوچه ۱۶۸ غربی (میرکی)- پلاک ۸۹ (خوابگاه رشید)",
+                    "open_hours": "شصینمدص مدشصمیت ذدشصمیذ م",
+                    "price": "18 به بالا",
+                    "features": "شینصمیئشمصئ",
+                    "state": "Tehran",
+                    "city": "Tehran",
+                    "place_image": "/media/photos/places/None/photo_2018-12-02_18-14-44.jpg",
+                    "place_types": [
+                        "Italian",
+                        "FastFood",
+                        "Italian"
+                    ],
+                    "place_images": [
+                        {
+                            "id": 5,
+                            "user": 23,
+                            "place": 1,
+                            "up_votes": 0,
+                            "down_votes": 0,
+                            "image": "/media/photos/uploaded_images/None/cropped1092610918506555346.jpg",
+                            "your_vote": 0
+                        }
+                    ],
+                    "overall_score": 4.5,
+                    "all_scores_count": 2,
+                    "one_score_count": 0,
+                    "two_score_count": 0,
+                    "three_score_count": 0,
+                    "four_score_count": 1,
+                    "five_score_count": 1,
+                    "food_score_average": 4.5,
+                    "service_score_average": 4.5,
+                    "ambiance_score_average": 4.5,
+                    "coordinate_place": [
+                        {
+                            "latitude": 35.7523456,
+                            "longitude": 51.5571712
+                        }
+                    ],
+                    "phones_place": [
+                        "9215206388",
+                        "36060889"
+                    ]
+                },
+                "place_score": {
+                    "id": 6,
+                    "user": "09215206388",
+                    "place": 1,
+                    "total_score": 4,
+                    "food_score": 4,
+                    "service_score": 4,
+                    "ambiance_score": 4
+                },
+                "is_favorite": 1
+            }
+
+## Reviews List [/place/{phone_number}/{id}/review/]
+
+### Get [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "id": 1,
+                "reviews": [
+                    {
+                        "id": 20,
+                        "phone_number": "09215206388",
+                        "first_name": "عارف",
+                        "last_name": "حسینی",
+                        "profile_image": "/media/photos/users/09215206388/cropped8713264702468530527.jpg",
+                        "text": "text",
+                        "created_date": 1560380410.891126,
+                        "up_votes": 0,
+                        "down_votes": 0,
+                        "your_vote": 0
+                    }
+                ]
+            }
+
+## Menus List [/place/{phone_number}/{id}/menu/]
+
+### Get [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "id": 1,
+                "menus": [
+                    {
+                        "name": "پیتزا",
+                        "foods": [
+                            {
+                                "name": "مخلوط",
+                                "detail": "شصید صشنم",
+                                "price": 20000
+                            }
+                        ]
+                    },
+                    {
+                        "name": "نوشیدنی",
+                        "foods": [
+                            {
+                                "name": "نوشابه",
+                                "detail": "",
+                                "price": 3000
+                            }
+                        ]
+                    }
+                ]
+            }
+
+# Group Search
+
+## User Search [/search/user/{text}/]
+
+### Search [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                [
+                    {
+                        "phone_number": "453",
+                        "profile_image": "/media/media/photos/users/default.png",
+                        "first_name": "عارف",
+                        "last_name": "حسینی"
+                    }
+                ]
+            }
+
+## Place Search [/search/place/{text}/]
+
+### Search [GET]
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                [
+                    {
+                        "id": 1,
+                        "name": "آقای پیتزا",
+                        "place_types": [
+                            "Italian",
+                            "FastFood",
+                            "Italian"
+                        ],
+                        "place_image": "/media/photos/places/None/photo_2018-12-02_18-14-44.jpg",
+                        "overall_score": 4.5,
+                        "all_scores_count": 2
                     }
                 ]
             }
