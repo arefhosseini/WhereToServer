@@ -1,12 +1,21 @@
 from rest_framework import serializers
+
+from WhereToServer import settings
 from .models import User, Place, PlaceImage, CoordinatePlace, Menu, Food, Review, PlaceScore, Relation, FavoritePlace, \
-    Token, FavoritePlaceType
+    Token, FavoritePlaceType, ReviewVote, PlaceImageVote, Hashtag
 
 
 class TokenSerializer(serializers.ModelSerializer):
     class Meta:
         model = Token
         fields = ('phone_number', 'verify_code')
+
+
+class FavoritePlaceTypeSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FavoritePlaceType
+        fields = ('user', 'type')
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -16,12 +25,17 @@ class UserSerializer(serializers.ModelSerializer):
     place_scores_count = serializers.SerializerMethodField()
     uploaded_images_count = serializers.SerializerMethodField()
     favorite_places_count = serializers.SerializerMethodField()
+    favorite_place_types = serializers.SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field='type'
+    )
 
     class Meta:
         model = User
         fields = ('id', 'phone_number', 'profile_image', 'first_name', 'last_name', 'user_score',
                   'followers_count', 'followings_count', 'reviews_count', 'place_scores_count',
-                  'uploaded_images_count', 'favorite_places_count')
+                  'uploaded_images_count', 'favorite_places_count', 'favorite_place_types')
 
     def get_followers_count(self, obj):
         return obj.followers.count()
@@ -76,9 +90,18 @@ class PlaceListSerializer(serializers.ModelSerializer):
 
 
 class PlaceImageSerializer(serializers.ModelSerializer):
+    up_votes = serializers.SerializerMethodField()
+    down_votes = serializers.SerializerMethodField()
+
     class Meta:
         model = PlaceImage
-        fields = ('user', 'place', 'up_vote', 'down_vote', 'image')
+        fields = ('id', 'user', 'place', 'up_votes', 'down_votes', 'image')
+
+    def get_up_votes(self, obj):
+        return obj.place_image_votes.filter(vote=True).count()
+
+    def get_down_votes(self, obj):
+        return obj.place_image_votes.filter(vote=False).count()
 
 
 class CoordinatePlaceSerializer(serializers.ModelSerializer):
@@ -233,11 +256,14 @@ class PlaceReviewSerializer(serializers.ModelSerializer):
     first_name = serializers.SerializerMethodField()
     last_name = serializers.SerializerMethodField()
     profile_image = serializers.SerializerMethodField()
+    created_date = serializers.SerializerMethodField()
+    up_votes = serializers.SerializerMethodField()
+    down_votes = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
         fields = ('id', 'phone_number', 'first_name', 'last_name', 'profile_image',
-                  'text', 'created_date', 'up_vote', 'down_vote')
+                  'text', 'created_date', 'up_votes', 'down_votes')
 
     def get_phone_number(self, obj):
         return obj.user.phone_number
@@ -249,7 +275,16 @@ class PlaceReviewSerializer(serializers.ModelSerializer):
         return obj.user.last_name
 
     def get_profile_image(self, obj):
-        return obj.user.profile_image.name
+        return settings.MEDIA_URL + obj.user.profile_image.name
+
+    def get_created_date(self, obj):
+        return obj.created_date.timestamp()
+
+    def get_up_votes(self, obj):
+        return obj.review_votes.filter(vote=True).count()
+
+    def get_down_votes(self, obj):
+        return obj.review_votes.filter(vote=False).count()
 
 
 class PlaceReviewsSerializer(serializers.ModelSerializer):
@@ -263,17 +298,33 @@ class PlaceReviewsSerializer(serializers.ModelSerializer):
 class UserReviewSerializer(serializers.ModelSerializer):
     place_id = serializers.SerializerMethodField()
     place_name = serializers.SerializerMethodField()
+    place_image = serializers.SerializerMethodField()
+    created_date = serializers.SerializerMethodField()
+    up_votes = serializers.SerializerMethodField()
+    down_votes = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
         fields = ('id', 'text', 'created_date',
-                  'up_vote', 'down_vote', 'place_id', 'place_name')
+                  'up_votes', 'down_votes', 'place_id', 'place_name', 'place_image')
 
     def get_place_id(self, obj):
         return obj.place.id
 
     def get_place_name(self, obj):
         return obj.place.name
+
+    def get_place_image(self, obj):
+        return settings.MEDIA_URL + obj.place.place_image.name
+
+    def get_created_date(self, obj):
+        return obj.created_date.timestamp()
+
+    def get_up_votes(self, obj):
+        return obj.review_votes.filter(vote=True).count()
+
+    def get_down_votes(self, obj):
+        return obj.review_votes.filter(vote=False).count()
 
 
 class UserReviewsSerializer(serializers.ModelSerializer):
@@ -282,6 +333,65 @@ class UserReviewsSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('phone_number', 'reviews')
+
+
+class UserScoreSerializer(serializers.ModelSerializer):
+    place_id = serializers.SerializerMethodField()
+    place_name = serializers.SerializerMethodField()
+    place_image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PlaceScore
+        fields = ('total_score', 'food_score', 'service_score', 'ambiance_score',
+                  'place_id', 'place_name', 'place_image')
+
+    def get_place_id(self, obj):
+        return obj.place.id
+
+    def get_place_name(self, obj):
+        return obj.place.name
+
+    def get_place_image(self, obj):
+        return settings.MEDIA_URL + obj.place.place_image.name
+
+
+class UserScoresSerializer(serializers.ModelSerializer):
+    place_scores = UserScoreSerializer(many=True)
+
+    class Meta:
+        model = User
+        fields = ('phone_number', 'place_scores')
+
+
+class UserPlaceImageSerializer(serializers.ModelSerializer):
+    place_id = serializers.SerializerMethodField()
+    place_name = serializers.SerializerMethodField()
+    up_votes = serializers.SerializerMethodField()
+    down_votes = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PlaceImage
+        fields = ('id', 'image', 'place_id', 'place_name', 'up_votes', 'down_votes')
+
+    def get_place_id(self, obj):
+        return obj.place.id
+
+    def get_place_name(self, obj):
+        return obj.place.name
+
+    def get_up_votes(self, obj):
+        return obj.place_image_votes.filter(vote=True).count()
+
+    def get_down_votes(self, obj):
+        return obj.place_image_votes.filter(vote=False).count()
+
+
+class UserPlaceImagesSerializer(serializers.ModelSerializer):
+    place_images = UserPlaceImageSerializer(many=True)
+
+    class Meta:
+        model = User
+        fields = ('phone_number', 'place_images')
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -318,7 +428,7 @@ class FollowersSerializer(serializers.ModelSerializer):
         return obj.follower.last_name
 
     def get_profile_image(self, obj):
-        return obj.follower.profile_image.name
+        return settings.MEDIA_URL + obj.follower.profile_image.name
 
 
 class FollowingsSerializer(serializers.ModelSerializer):
@@ -341,7 +451,7 @@ class FollowingsSerializer(serializers.ModelSerializer):
         return obj.following.last_name
 
     def get_profile_image(self, obj):
-        return obj.following.profile_image.name
+        return settings.MEDIA_URL + obj.following.profile_image.name
 
 
 class RelationSerializer(serializers.ModelSerializer):
@@ -376,7 +486,7 @@ class FavoritePlaceSerializer(serializers.ModelSerializer):
         return obj.place.name
 
     def get_place_image(self, obj):
-        return str(obj.place.place_image)
+        return settings.MEDIA_URL + obj.place.place_image.name
 
 
 class FavoritePlacesSerializer(serializers.ModelSerializer):
@@ -394,8 +504,22 @@ class CreateFavoritePlaceSerializer(serializers.ModelSerializer):
         fields = ('id', 'user', 'place')
 
 
-class FavoritePlaceTypeSerializer(serializers.ModelSerializer):
+class ReviewVoteSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = FavoritePlaceType
-        fields = ('user', 'type')
+        model = ReviewVote
+        fields = ('user', 'review', 'vote')
+
+
+class PlaceImageVoteSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PlaceImageVote
+        fields = ('user', 'place_image', 'vote')
+
+
+class HashtagSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Hashtag
+        fields = ('place', 'review', 'name')

@@ -3,15 +3,17 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import User, Place, FavoritePlace, PlaceScore, Token, Relation, FavoritePlaceType, PlaceType
+from .models import User, Place, FavoritePlace, PlaceScore, Token, Relation, FavoritePlaceType, PlaceType, ReviewVote, \
+    Review, PlaceImage, PlaceImageVote
 from .serializers import UserSerializer, PlaceSerializer, MenusSerializer, PlaceReviewsSerializer, \
     UserReviewsSerializer, PlaceScoreSerializer, ReviewSerializer, CreateFriendSerializer, \
     UploadPlaceImageSerializer, FavoritePlacesSerializer, PlaceListSerializer, \
     CreateFavoritePlaceSerializer, TokenSerializer, RelationSerializer, FavoritePlaceTypeSerializer, \
-    SimpleUserSerializer
+    SimpleUserSerializer, ReviewVoteSerializer, PlaceImageVoteSerializer, HashtagSerializer, UserScoresSerializer, \
+    UserPlaceImagesSerializer
 
 
-class Verify(APIView):
+class VerifyUser(APIView):
     """
     Verify phone number with token
     """
@@ -30,7 +32,7 @@ class Verify(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UserList(APIView):
+class UserControl(APIView):
     """
     Create, Edit, Delete User
     """
@@ -38,21 +40,15 @@ class UserList(APIView):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            data = revision_profile_image(serializer.data, "profile_image")
-            return Response(data, status=status.HTTP_201_CREATED)
-        else:
-            user = get_user(request.data.get('phone_number'))
-            serializer = UserSerializer(user)
-            data = revision_profile_image(serializer.data, "profile_image")
-            return Response(data)
+            return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, format=None):
         user = get_user(request.data.get('phone_number'))
         serializer = UserSerializer(user, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            data = revision_profile_image(serializer.data, "profile_image")
-            return Response(data)
+            return Response({"status": "ok"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, format=None):
@@ -79,18 +75,18 @@ class UserDetail(APIView):
         your_user = get_user(your_phone_number)
         user = get_user(user_phone_number)
         serializer = UserSerializer(user)
-        is_following = check_relation(your_user, user)
         data = serializer.data.copy()
         data["user_score"] = calculate_user_score(data)
         if data["first_name"] is None:
             data["first_name"] = ""
         if data["last_name"] is None:
             data["last_name"] = ""
+
+        is_following = check_relation(your_user, user)
         if is_following is None:
             data["is_following"] = 0
         else:
             data["is_following"] = 1
-        data = revision_profile_image(data, "profile_image")
         return Response(data)
 
 
@@ -101,8 +97,7 @@ class PlaceList(APIView):
     def get_total_places(self):
         places = Place.objects.all()
         serializer = PlaceListSerializer(places, many=True)
-        data = revision_place_images(serializer.data, "place_image")
-        data = sort_total_places(data)
+        data = sort_total_places(serializer.data)
         return data
 
     def get_suggested_places_by_user(self, user):
@@ -118,9 +113,8 @@ class PlaceList(APIView):
                 places.append(item.place)
         if len(places):
             serializer = PlaceListSerializer(places, many=True)
-            data = revision_place_images(serializer.data, "place_image")
             places = []
-            for item in data:
+            for item in serializer.data:
                 if check_place_list(places, item):
                     places.append(item)
         return places
@@ -142,8 +136,7 @@ class PlaceList(APIView):
             for item in favorite_places_serializer["favorite_places"]:
                 favorite_places.append(get_place(item["id"]))
             place_serializer = PlaceListSerializer(favorite_places, many=True)
-            data = revision_place_images(place_serializer.data, "place_image")
-            for place in data:
+            for place in place_serializer.data.copy():
                 if check_place_list(places, place):
                     places.append(place)
 
@@ -185,49 +178,95 @@ class PlaceDetail(APIView):
             is_favorite = 0
         else:
             is_favorite = 1
+        place_data = place_serializer.data.copy()
+        for place_image in place_data["place_images"]:
+            place_image_vote = check_place_image_vote(user, get_place_image(place_image["id"]))
+            if place_image_vote is None or not place_image_vote.vote:
+                place_image["your_vote"] = 0
+            else:
+                place_image["your_vote"] = 1
         return Response({
-            "place": place_serializer.data,
+            "place": place_data,
             "place_score": score_data,
             "is_favorite": is_favorite
         })
 
 
-class MenuDetail(APIView):
+class MenuList(APIView):
     """
     Retrieve menu of place.
     """
-    def get(self, request, pk, format=None):
+    def get(self, request, phone_number, pk, format=None):
         place = get_place(pk)
 
         serializer = MenusSerializer(place)
         return Response(serializer.data)
 
 
-class PlaceReviewDetail(APIView):
+class PlaceReviewList(APIView):
     """
     Retrieve reviews of place.
     """
-    def get(self, request, pk, format=None):
+    def get(self, request, phone_number, pk, format=None):
         place = get_place(pk)
-
+        user = get_user(phone_number)
         serializer = PlaceReviewsSerializer(place)
         serializer.data["reviews"].reverse()
-        data = revision_review_profile_images(serializer.data, "profile_image")
+        data = serializer.data.copy()
+        for review in data["reviews"]:
+            review_vote = check_review_vote(user, get_review(review["id"]))
+            if review_vote is None or not review_vote.vote:
+                review["your_vote"] = 0
+            else:
+                review["your_vote"] = 1
         return Response(data)
 
 
-class UserReviewDetail(APIView):
+class UserReviewList(APIView):
     """
     Retrieve reviews of user.
     """
-    def get(self, request, phone_number, format=None):
-        user = get_user(phone_number)
+    def get(self, request, your_phone_number, user_phone_number, format=None):
+        user = get_user(user_phone_number)
+        your_user = get_user(your_phone_number)
+        data = UserReviewsSerializer(user).data.copy()
+        for review in data["reviews"]:
+            review_vote = check_review_vote(your_user, get_review(review["id"]))
+            if review_vote is None or not review_vote.vote:
+                review["your_vote"] = 0
+            else:
+                review["your_vote"] = 1
+        return Response(data)
 
-        serializer = UserReviewsSerializer(user)
+
+class UserPlaceScoreList(APIView):
+    """
+    Retrieve place scores of user.
+    """
+    def get(self, request, your_phone_number, user_phone_number, format=None):
+        user = get_user(user_phone_number)
+        serializer = UserScoresSerializer(user)
         return Response(serializer.data)
 
 
-class ScoreDetail(APIView):
+class UserImageList(APIView):
+    """
+    Retrieve scores of user.
+    """
+    def get(self, request, your_phone_number, user_phone_number, format=None):
+        user = get_user(user_phone_number)
+        your_user = get_user(your_phone_number)
+        data = UserPlaceImagesSerializer(user).data.copy()
+        for place_image in data["place_images"]:
+            place_image_vote = check_place_image_vote(your_user, get_place_image(place_image["id"]))
+            if place_image_vote is None or not place_image_vote.vote:
+                place_image["your_vote"] = 0
+            else:
+                place_image["your_vote"] = 1
+        return Response(data)
+
+
+class ScoreControl(APIView):
     """
     Create new score.
     """
@@ -243,7 +282,7 @@ class ScoreDetail(APIView):
             serializer = PlaceScoreSerializer(place_score, data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response({"status": "ok"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, format=None):
@@ -256,7 +295,7 @@ class ScoreDetail(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ReviewDetail(APIView):
+class ReviewControl(APIView):
     """
     Create new review.
     """
@@ -268,11 +307,21 @@ class ReviewDetail(APIView):
         serializer = ReviewSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            hashtags = get_hashtags(serializer.data.get("text"))
+            hashtag_data = {
+                "place": place.id,
+                "review": serializer.data.get("id")
+            }
+            for hashtag in hashtags:
+                hashtag_data["name"] = hashtag
+                hashtag_serializer = HashtagSerializer(data=hashtag_data)
+                if hashtag_serializer.is_valid():
+                    hashtag_serializer.save()
+            return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class GetRelation(APIView):
+class RelationList(APIView):
     """
     Retrieve friend list.
     """
@@ -281,7 +330,6 @@ class GetRelation(APIView):
         your_user = get_user(your_phone_number)
         serializer = RelationSerializer(user)
         data = serializer.data.copy()
-        data = revision_relation_profile_images(data, "profile_image")
         for relation_data in data["followers"]:
             if check_relation(your_user, get_user(relation_data["phone_number"])) is None:
                 relation_data["is_following"] = 0
@@ -295,7 +343,7 @@ class GetRelation(APIView):
         return Response(data)
 
 
-class EditRelation(APIView):
+class RelationControl(APIView):
     """
     Follow and Unfollow another user.
     """
@@ -310,11 +358,11 @@ class EditRelation(APIView):
             serializer = CreateFriendSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             serializer = CreateFriendSerializer(friend)
-            return Response(serializer.data)
+            return Response({"status": "ok"})
 
     def delete(self, request, format=None):
         friend = get_relation(request.data.get('follower'), request.data.get('following'))
@@ -338,19 +386,18 @@ class UploadPlaceImage(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class GetFavoritePlace(APIView):
+class FavoritePlaceList(APIView):
     """
     Retrieve Favorite Places of User.
     """
-    def get(self, request, phone_number, format=None):
-        user = get_user(phone_number)
+    def get(self, request, your_phone_number, user_phone_number, format=None):
+        user = get_user(user_phone_number)
 
         serializer = FavoritePlacesSerializer(user)
-        data = revision_favorite_places_place_image(serializer.data, "place_image")
-        return Response(data)
+        return Response(serializer.data)
 
 
-class EditFavoritePlace(APIView):
+class FavoritePlaceControl(APIView):
     """
     Create or Delete Favorite Place of User.
     """
@@ -364,11 +411,11 @@ class EditFavoritePlace(APIView):
             serializer = CreateFavoritePlaceSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             serializer = CreateFavoritePlaceSerializer(favorite_place)
-            return Response(serializer.data)
+            return Response({"status": "ok"})
 
     def delete(self, request, format=None):
         favorite_place = get_favorite_place(request.data.get('user'), request.data.get('place'))
@@ -376,7 +423,7 @@ class EditFavoritePlace(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class EditFavoritePlaceType(APIView):
+class FavoritePlaceTypeControl(APIView):
     """
     Create or Delete Favorite Place Type of User.
     """
@@ -389,11 +436,11 @@ class EditFavoritePlaceType(APIView):
             serializer = FavoritePlaceTypeSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             serializer = FavoritePlaceTypeSerializer(favorite_place_type)
-            return Response(serializer.data)
+            return Response({"status": "ok"})
 
     def delete(self, request, format=None):
         favorite_place_type = get_favorite_place_type(request.data.get('user'), request.data.get('type'))
@@ -401,35 +448,93 @@ class EditFavoritePlaceType(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class Search(APIView):
+class SearchPlace(APIView):
     """
-    Search place & user by name
+    Search place by name
     """
-    def get_places(self, text):
-        places = []
-        for place in Place.objects.filter(name__contains=text):
-            places.append(place)
-        place_serializer = PlaceListSerializer(places, many=True)
-        data = revision_place_images(place_serializer.data, "place_image")
-        places = sort_total_places(data)
-        return places
-
-    def get_users(self, text):
-        users = []
-        for user in User.objects.filter(first_name__contains=text):
-            if check_user_list(users, user):
-                users.append(user)
-        for user in User.objects.filter(last_name__contains=text):
-            if check_user_list(users, user):
-                users.append(user)
-        user_serializer = SimpleUserSerializer(users, many=True)
-        return user_serializer.data
-
     def get(self, request, text):
-        return Response({
-            "places": self.get_places(text),
-            "users": self.get_users(text)
-        })
+        places = []
+        phrases = text.split()
+        phrases.append(text)
+        for phrase in phrases:
+            for place in Place.objects.filter(name__contains=phrase):
+                if check_place_list_object(places, place):
+                    places.append(place)
+        place_serializer = PlaceListSerializer(places, many=True)
+        places = sort_total_places(place_serializer.data)
+        return Response(places)
+
+
+class SearchUser(APIView):
+    """
+    Search user by name
+    """
+    def get(self, request, text):
+        users = []
+        phrases = text.split()
+        if text not in phrases:
+            phrases.append(text)
+        for phrase in phrases:
+            for user in User.objects.filter(first_name__contains=phrase):
+                if check_user_list(users, user):
+                    users.append(user)
+            for user in User.objects.filter(last_name__contains=phrase):
+                if check_user_list(users, user):
+                    users.append(user)
+        user_serializer = SimpleUserSerializer(users, many=True)
+        return Response(user_serializer.data)
+
+
+class ReviewVoteControl(APIView):
+    """
+    Create or Delete Review Vote.
+    """
+    def post(self, request):
+        user = get_user(request.data.get("user"))
+        review = get_review(request.data.get("review"))
+        review_vote = check_review_vote(user, review)
+        if review_vote is None:
+            data = request.data.copy()
+            data["user"] = user.id
+            serializer = ReviewVoteSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            serializer = ReviewVoteSerializer(review_vote)
+            return Response({"status": "ok"})
+
+    def delete(self, request, format=None):
+        review_vote = get_review_vote(request.data.get('user'), request.data.get('review'))
+        review_vote.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PlaceImageVoteControl(APIView):
+    """
+    Create or Delete Place Image Vote.
+    """
+    def post(self, request):
+        user = get_user(request.data.get("user"))
+        place_image = get_place_image(request.data.get("place_image"))
+        place_image_vote = check_place_image_vote(user, place_image)
+        if place_image_vote is None:
+            data = request.data.copy()
+            data["user"] = user.id
+            serializer = PlaceImageVoteSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            serializer = PlaceImageVoteSerializer(place_image_vote)
+            return Response({"status": "ok"})
+
+    def delete(self, request, format=None):
+        place_image_vote = get_place_image_vote(request.data.get('user'), request.data.get('place_image'))
+        place_image_vote.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def get_verify_code(phone_number):
@@ -448,7 +553,7 @@ def get_user(phone_number):
         return User.objects.get(phone_number=phone_number)
     except User.DoesNotExist:
         raise Http404
-    
+
 
 def get_place(pk):
     try:
@@ -469,13 +574,27 @@ def check_place_score(user, place):
         return PlaceScore.objects.get(user=user, place=place)
     except PlaceScore.DoesNotExist:
         return None
-    
+
 
 def get_relation(follower_phone_number, following_phone_number):
     try:
         return Relation.objects.get(follower=get_user(follower_phone_number),
                                     following=get_user(following_phone_number))
     except Relation.DoesNotExist:
+        raise Http404
+
+
+def get_review(pk):
+    try:
+        return Review.objects.get(pk=pk)
+    except Review.DoesNotExist:
+        raise Http404
+
+
+def get_place_image(pk):
+    try:
+        return PlaceImage.objects.get(pk=pk)
+    except PlaceImage.DoesNotExist:
         raise Http404
 
 
@@ -500,6 +619,34 @@ def check_favorite_place(user, place):
         return None
 
 
+def get_review_vote(user_phone_number, review_id):
+    try:
+        return ReviewVote.objects.get(user=get_user(user_phone_number), review=get_review(review_id))
+    except ReviewVote.DoesNotExist:
+        raise Http404
+
+
+def check_review_vote(user, review):
+    try:
+        return ReviewVote.objects.get(user=user, review=review)
+    except ReviewVote.DoesNotExist:
+        return None
+
+
+def get_place_image_vote(user_phone_number, place_image_id):
+    try:
+        return PlaceImageVote.objects.get(user=get_user(user_phone_number), place_image=get_place_image(place_image_id))
+    except PlaceImageVote.DoesNotExist:
+        raise Http404
+
+
+def check_place_image_vote(user, place_image):
+    try:
+        return PlaceImageVote.objects.get(user=user, place_image=place_image)
+    except PlaceImageVote.DoesNotExist:
+        return None
+
+
 def get_favorite_place_type(user_phone_number, place_type):
     try:
         return FavoritePlaceType.objects.get(user=get_user(user_phone_number), type=place_type)
@@ -512,48 +659,6 @@ def check_favorite_place_type(user, place_type):
         return FavoritePlaceType.objects.get(user=user, type=place_type)
     except FavoritePlaceType.DoesNotExist:
         return None
-
-
-def revision_profile_image(data, key):
-    data = data.copy()
-    if "media" not in data[key]:
-        data[key] = "media/" + data[key]
-    return data
-
-
-def revision_place_images(data, key):
-    data = data.copy()
-    for item in data:
-        if "media" not in item[key]:
-            item[key] = "media/" + item[key]
-    return data
-
-
-def revision_review_profile_images(data, key):
-    data = data.copy()
-    for item in data["reviews"]:
-        if "media" not in item[key]:
-            item[key] = "media/" + item[key]
-    return data
-
-
-def revision_relation_profile_images(data, key):
-    data = data.copy()
-    for item in data["followers"]:
-        if "media" not in item[key]:
-            item[key] = "media/" + item[key]
-    for item in data["followings"]:
-        if "media" not in item[key]:
-            item[key] = "media/" + item[key]
-    return data
-
-
-def revision_favorite_places_place_image(data, key):
-    data = data.copy()
-    for item in data["favorite_places"]:
-        if "media" not in item[key]:
-            item[key] = "media/" + item[key]
-    return data
 
 
 def calculate_user_score(data):
@@ -585,8 +690,24 @@ def check_place_list(places, place):
     return True
 
 
+def check_place_list_object(places, place):
+    for p in places:
+        if p.id == place.id:
+            return False
+    return True
+
+
 def check_user_list(users, user):
     for u in users:
         if u.phone_number == user.phone_number:
             return False
     return True
+
+
+def get_hashtags(text):
+    hashtags = []
+    phrases = text.split()
+    for phrase in phrases:
+        if phrase[0] == "#":
+            hashtags.append(phrase)
+    return hashtags

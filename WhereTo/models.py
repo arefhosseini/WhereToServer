@@ -281,8 +281,6 @@ class PlaceImage(models.Model):
     user = models.ForeignKey(User, related_name="place_images", on_delete=models.CASCADE, null=False)
     place = models.ForeignKey(Place, related_name="place_images", on_delete=models.CASCADE, null=False)
     created_date = models.DateTimeField(default=timezone.now)
-    up_vote = models.IntegerField(default=0)
-    down_vote = models.IntegerField(default=0)
     image = models.ImageField(upload_to=get_uploaded_image_path, blank=True, null=True)
 
     def __str__(self):
@@ -330,8 +328,6 @@ class Review(models.Model):
     place = models.ForeignKey(Place, related_name="reviews", on_delete=models.CASCADE, null=False)
     text = models.TextField(default="", null=False)
     created_date = models.DateTimeField(default=timezone.now)
-    up_vote = models.IntegerField(default=0)
-    down_vote = models.IntegerField(default=0)
 
     def __str__(self):
         return self.text
@@ -344,6 +340,18 @@ class Hashtag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ReviewVote(models.Model):
+    review = models.ForeignKey(Review, related_name="review_votes", on_delete=models.CASCADE, null=False)
+    user = models.ForeignKey(User, related_name="review_votes", on_delete=models.CASCADE, null=False)
+    vote = models.BooleanField(null=False)
+
+
+class PlaceImageVote(models.Model):
+    place_image = models.ForeignKey(PlaceImage, related_name="place_image_votes", on_delete=models.CASCADE, null=False)
+    user = models.ForeignKey(User, related_name="place_image_votes", on_delete=models.CASCADE, null=False)
+    vote = models.BooleanField(null=False)
 
 
 class FavoritePlaceType(models.Model):

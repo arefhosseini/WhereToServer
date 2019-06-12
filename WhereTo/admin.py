@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import User, Place, Review, PlaceScore, Hashtag, Menu, Relation, Token, FavoritePlaceType
+from .models import User, Place, Review, PlaceScore, Hashtag, Menu, Relation, Token, FavoritePlaceType, ReviewVote, \
+    PlaceImageVote
 from .models import FavoritePlace, Food, CoordinatePlace, PhonePlace, PlaceImage, PlaceType
 
 admin.site.register(Token)
@@ -17,3 +18,5 @@ admin.site.register(PhonePlace)
 admin.site.register(PlaceImage)
 admin.site.register(PlaceType)
 admin.site.register(FavoritePlaceType)
+admin.site.register(ReviewVote)
+admin.site.register(PlaceImageVote)
