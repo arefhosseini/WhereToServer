@@ -17,8 +17,8 @@ def get_uploaded_image_path(instance, filename):
     return os.path.join('media', 'photos', 'uploaded_images', str(instance.id), filename)
 
 
-user_image_path_default = 'media/photos/users/default.png'
-place_image_path_default = 'media/photos/places/default.png'
+user_image_path_default = 'photos/users/default.png'
+place_image_path_default = 'photos/places/default.png'
 
 
 class PlaceTypeEnum(Enum):

@@ -10,7 +10,7 @@ from .serializers import UserSerializer, PlaceSerializer, MenusSerializer, Place
     UploadPlaceImageSerializer, FavoritePlacesSerializer, PlaceListSerializer, \
     CreateFavoritePlaceSerializer, TokenSerializer, RelationSerializer, FavoritePlaceTypeSerializer, \
     SimpleUserSerializer, ReviewVoteSerializer, PlaceImageVoteSerializer, HashtagSerializer, UserScoresSerializer, \
-    UserPlaceImagesSerializer
+    UserPlaceImagesSerializer, UserControlSerializer
 
 
 class VerifyUser(APIView):
@@ -37,18 +37,21 @@ class UserControl(APIView):
     Create, Edit, Delete User
     """
     def post(self, request):
-        serializer = UserSerializer(data=request.data)
+        serializer = UserControlSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            user = get_user(request.data.get('phone_number'))
+            serializer = UserControlSerializer(user)
+            return Response(serializer.data)
 
     def put(self, request, format=None):
         user = get_user(request.data.get('phone_number'))
-        serializer = UserSerializer(user, data=request.data)
+        serializer = UserControlSerializer(user, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"status": "ok"})
+            return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, format=None):
@@ -209,12 +212,17 @@ class PlaceReviewList(APIView):
     """
     def get(self, request, phone_number, pk, format=None):
         place = get_place(pk)
-        user = get_user(phone_number)
+        your_user = get_user(phone_number)
         serializer = PlaceReviewsSerializer(place)
         serializer.data["reviews"].reverse()
         data = serializer.data.copy()
         for review in data["reviews"]:
-            review_vote = check_review_vote(user, get_review(review["id"]))
+            place_score = check_place_score(get_user(review["phone_number"]), place)
+            if place_score is not None:
+                review["place_score"] = place_score.total_score
+            else:
+                review["place_score"] = 0
+            review_vote = check_review_vote(your_user, get_review(review["id"]))
             if review_vote is None or not review_vote.vote:
                 review["your_vote"] = 0
             else:
@@ -231,6 +239,11 @@ class UserReviewList(APIView):
         your_user = get_user(your_phone_number)
         data = UserReviewsSerializer(user).data.copy()
         for review in data["reviews"]:
+            place_score = check_place_score(user, get_place(review["place_id"]))
+            if place_score is not None:
+                review["place_score"] = place_score.total_score
+            else:
+                review["place_score"] = 0
             review_vote = check_review_vote(your_user, get_review(review["id"]))
             if review_vote is None or not review_vote.vote:
                 review["your_vote"] = 0

@@ -18,6 +18,18 @@ class FavoritePlaceTypeSerializer(serializers.ModelSerializer):
         fields = ('user', 'type')
 
 
+class UserControlSerializer(serializers.ModelSerializer):
+    favorite_place_types = serializers.SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field='type'
+    )
+
+    class Meta:
+        model = User
+        fields = ('id', 'phone_number', 'profile_image', 'first_name', 'last_name', 'favorite_place_types')
+
+
 class UserSerializer(serializers.ModelSerializer):
     followers_count = serializers.SerializerMethodField()
     followings_count = serializers.SerializerMethodField()
@@ -155,7 +167,7 @@ class PlaceSerializer(serializers.ModelSerializer):
         for score in all_scores:
             average += score.total_score
         if len(all_scores) > 0:
-            return average / len(all_scores)
+            return round((average / len(all_scores)), 1)
         return 0
 
     def get_all_scores_count(self, obj):
@@ -207,7 +219,8 @@ class PlaceSerializer(serializers.ModelSerializer):
         for score in all_scores:
             average += score.food_score
         if len(all_scores) > 0:
-            return average / len(all_scores)
+
+            return round((average / len(all_scores)), 1)
         return 0
 
     def get_service_score_average(self, obj):
@@ -216,7 +229,7 @@ class PlaceSerializer(serializers.ModelSerializer):
         for score in all_scores:
             average += score.service_score
         if len(all_scores) > 0:
-            return average / len(all_scores)
+            return round((average / len(all_scores)), 1)
         return 0
 
     def get_ambiance_score_average(self, obj):
@@ -225,7 +238,7 @@ class PlaceSerializer(serializers.ModelSerializer):
         for score in all_scores:
             average += score.ambiance_score
         if len(all_scores) > 0:
-            return average / len(all_scores)
+            return round((average / len(all_scores)), 1)
         return 0
 
 
@@ -278,7 +291,7 @@ class PlaceReviewSerializer(serializers.ModelSerializer):
         return settings.MEDIA_URL + obj.user.profile_image.name
 
     def get_created_date(self, obj):
-        return obj.created_date.timestamp()
+        return round(obj.created_date.timestamp() * 1000)
 
     def get_up_votes(self, obj):
         return obj.review_votes.filter(vote=True).count()
@@ -318,7 +331,7 @@ class UserReviewSerializer(serializers.ModelSerializer):
         return settings.MEDIA_URL + obj.place.place_image.name
 
     def get_created_date(self, obj):
-        return obj.created_date.timestamp()
+        return round(obj.created_date.timestamp() * 1000)
 
     def get_up_votes(self, obj):
         return obj.review_votes.filter(vote=True).count()
