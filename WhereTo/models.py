@@ -345,13 +345,13 @@ class Hashtag(models.Model):
 class ReviewVote(models.Model):
     review = models.ForeignKey(Review, related_name="review_votes", on_delete=models.CASCADE, null=False)
     user = models.ForeignKey(User, related_name="review_votes", on_delete=models.CASCADE, null=False)
-    vote = models.BooleanField(null=False)
+    vote = models.IntegerField(null=False)
 
 
 class PlaceImageVote(models.Model):
     place_image = models.ForeignKey(PlaceImage, related_name="place_image_votes", on_delete=models.CASCADE, null=False)
     user = models.ForeignKey(User, related_name="place_image_votes", on_delete=models.CASCADE, null=False)
-    vote = models.BooleanField(null=False)
+    vote = models.IntegerField(null=False)
 
 
 class FavoritePlaceType(models.Model):

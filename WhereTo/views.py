@@ -184,10 +184,12 @@ class PlaceDetail(APIView):
         place_data = place_serializer.data.copy()
         for place_image in place_data["place_images"]:
             place_image_vote = check_place_image_vote(user, get_place_image(place_image["id"]))
-            if place_image_vote is None or not place_image_vote.vote:
+            if place_image_vote is None:
                 place_image["your_vote"] = 0
-            else:
+            elif place_image_vote.vote == 1:
                 place_image["your_vote"] = 1
+            else:
+                place_image["your_vote"] = -1
         return Response({
             "place": place_data,
             "place_score": score_data,
@@ -223,10 +225,12 @@ class PlaceReviewList(APIView):
             else:
                 review["place_score"] = 0
             review_vote = check_review_vote(your_user, get_review(review["id"]))
-            if review_vote is None or not review_vote.vote:
+            if review_vote is None:
                 review["your_vote"] = 0
-            else:
+            elif review_vote.vote == 1:
                 review["your_vote"] = 1
+            else:
+                review["your_vote"] = -1
         return Response(data)
 
 
@@ -238,6 +242,7 @@ class UserReviewList(APIView):
         user = get_user(user_phone_number)
         your_user = get_user(your_phone_number)
         data = UserReviewsSerializer(user).data.copy()
+        data["reviews"].reverse()
         for review in data["reviews"]:
             place_score = check_place_score(user, get_place(review["place_id"]))
             if place_score is not None:
@@ -245,10 +250,12 @@ class UserReviewList(APIView):
             else:
                 review["place_score"] = 0
             review_vote = check_review_vote(your_user, get_review(review["id"]))
-            if review_vote is None or not review_vote.vote:
+            if review_vote is None:
                 review["your_vote"] = 0
-            else:
+            elif review_vote.vote == 1:
                 review["your_vote"] = 1
+            else:
+                review["your_vote"] = -1
         return Response(data)
 
 
@@ -272,10 +279,12 @@ class UserImageList(APIView):
         data = UserPlaceImagesSerializer(user).data.copy()
         for place_image in data["place_images"]:
             place_image_vote = check_place_image_vote(your_user, get_place_image(place_image["id"]))
-            if place_image_vote is None or not place_image_vote.vote:
+            if place_image_vote is None:
                 place_image["your_vote"] = 0
-            else:
+            elif place_image_vote.vote == 1:
                 place_image["your_vote"] = 1
+            else:
+                place_image["your_vote"] = -1
         return Response(data)
 
 
@@ -405,9 +414,16 @@ class FavoritePlaceList(APIView):
     """
     def get(self, request, your_phone_number, user_phone_number, format=None):
         user = get_user(user_phone_number)
-
+        your_user = get_user(your_phone_number)
         serializer = FavoritePlacesSerializer(user)
-        return Response(serializer.data)
+        data = serializer.data.copy()
+        for item in data["favorite_places"]:
+            favorite_place = check_favorite_place(your_user, get_place(item["id"]))
+            if favorite_place is None:
+                item["is_your_favorite"] = 0
+            else:
+                item["is_your_favorite"] = 1
+        return Response(data)
 
 
 class FavoritePlaceControl(APIView):
@@ -515,7 +531,8 @@ class ReviewVoteControl(APIView):
                 return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            serializer = ReviewVoteSerializer(review_vote)
+            review_vote.vote = request.data.get("vote")
+            review_vote.save()
             return Response({"status": "ok"})
 
     def delete(self, request, format=None):
@@ -541,7 +558,8 @@ class PlaceImageVoteControl(APIView):
                 return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            serializer = PlaceImageVoteSerializer(place_image_vote)
+            place_image_vote.vote = request.data.get("vote")
+            place_image_vote.save()
             return Response({"status": "ok"})
 
     def delete(self, request, format=None):
