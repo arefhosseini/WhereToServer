@@ -458,23 +458,20 @@ class FavoritePlaceTypeControl(APIView):
     """
     def post(self, request):
         user = get_user(request.data.get("user"))
-        favorite_place_type = check_favorite_place_type(user, request.data.get("type"))
-        if favorite_place_type is None:
-            data = request.data.copy()
-            data["user"] = user.id
-            serializer = FavoritePlaceTypeSerializer(data=data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            serializer = FavoritePlaceTypeSerializer(favorite_place_type)
-            return Response({"status": "ok"})
-
-    def delete(self, request, format=None):
-        favorite_place_type = get_favorite_place_type(request.data.get('user'), request.data.get('type'))
-        favorite_place_type.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        data = {"user": user.id}
+        for place_type in request.data.get("add_types"):
+            favorite_place_type = check_favorite_place_type(user, place_type)
+            if favorite_place_type is None:
+                data["type"] = place_type
+                serializer = FavoritePlaceTypeSerializer(data=data)
+                if serializer.is_valid():
+                    serializer.save()
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        for place_type in request.data.get("delete_types"):
+            favorite_place_type = get_favorite_place_type(request.data.get('user'), place_type)
+            favorite_place_type.delete()
+        return Response({"status": "ok"})
 
 
 class SearchPlace(APIView):
