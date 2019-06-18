@@ -172,13 +172,20 @@ the **keyword `group`** and its name is `Messages`.
 
 ## Favorite Place Type Control [/user/favorite_place_type/]
 
-### Create [POST]
+### Control [POST]
 
 + Request (application/json)
 
         {
             "user": "09215206388",
-            "type": "Irani" 
+            "add_types": [
+                "Irani",
+                "Italian"
+            ],
+            "delete_types": [
+                "FastFood",
+                "Cafe"
+            ]
         }
 
 + Response 200 (application/json)
@@ -188,17 +195,6 @@ the **keyword `group`** and its name is `Messages`.
             {
                 "status": "ok"
             }
-
-### Remove [DELETE]
-
-+ Request (application/json)
-
-        {
-            "user": "09215206388",
-            "type": "Irani"
-        }
-
-+ Response 204
 
 ## Signle User [/user/{your_phone_number}/{user_phone_number}/]
 
